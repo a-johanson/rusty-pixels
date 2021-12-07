@@ -21,6 +21,18 @@ fn put_pixel(image: &mut RgbImage, x: i32, y: i32, r: u8, g: u8, b: u8, alpha: f
     }
 }
 
+fn put_point(image: &mut RgbImage, x: f32, y: f32, r: u8, g: u8, b: u8) {
+    let f_x = x.fract();
+    let f_y = y.fract();
+    let t_x = x as i32;
+    let t_y = y as i32;
+
+    put_pixel(image, t_x, t_y, r, g, b, (1.0 - f_x) * (1.0 - f_y));
+    put_pixel(image, t_x + 1, t_y, r, g, b, f_x * (1.0 - f_y));
+    put_pixel(image, t_x, t_y + 1, r, g, b, (1.0 - f_x) * f_y);
+    put_pixel(image, t_x + 1, t_y + 1, r, g, b, f_x * f_y);
+}
+
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -38,6 +50,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         put_pixel(&mut image, x + 3, HEIGHT / 2, 242, 238, 230, 0.25);
         put_pixel(&mut image, x, HEIGHT / 2 + 1, 242, 238, 230, 1.0);
     }
+
+    put_point(&mut image, 0.0, 0.0, 242, 238, 230);
+    put_point(&mut image, 2.0, 1.75, 242, 238, 230);
+    put_point(&mut image, 10.75, 11.0, 242, 238, 230);
+    put_point(&mut image, 3.5, 3.5, 242, 238, 230);
 
     // image.save_with_format("image.png", ImageFormat::Png)?;
 
