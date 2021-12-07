@@ -1,10 +1,13 @@
+use image::RgbImage;
+use rand::Rng;
+use rand_core::SeedableRng;
+use rand_xoshiro::Xoshiro256PlusPlus;
 use show_image::{Color, WindowOptions, event, create_window};
-use image::{ImageFormat, RgbImage};
 
 /// r, g, b in [0, 255]
 /// alpha in [0.0, 1.0]
 fn put_pixel(image: &mut RgbImage, x: i32, y: i32, r: u8, g: u8, b: u8, alpha: f32) {
-    if x >= 0 && y >= 0 && (x as u32) < image.dimensions().0 && (y as u32) < image.dimensions().1 {
+    if alpha > 0.0 && x >= 0 && y >= 0 && (x as u32) < image.dimensions().0 && (y as u32) < image.dimensions().1 {
         let pixel = image.get_pixel_mut(x as u32, y as u32);
         let data = (*pixel as image::Rgb<u8>).0;
 
@@ -34,6 +37,7 @@ fn draw_point(image: &mut RgbImage, x: f32, y: f32, r: u8, g: u8, b: u8) {
 }
 
 fn draw_circle_msaa(image: &mut RgbImage, c_x: f32, c_y: f32, radius: f32, r: u8, g: u8, b: u8) {
+    // Cf. https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing, https://en.wikipedia.org/wiki/Spatial_anti-aliasing
     // This algorithm is not very efficient as it multi-samples also "inner" pixels
     // Probably could be avoided using a scan line approach
 
@@ -61,18 +65,32 @@ fn draw_circle_msaa(image: &mut RgbImage, c_x: f32, c_y: f32, radius: f32, r: u8
             put_pixel(image, x_i, y_i, r, g, b, alpha);
         }
     }
+}
 
+fn draw_pillar<R: Rng + ?Sized>(image: &mut RgbImage, rng: &mut R, c_x: f32, c_y: f32, s_x: f32, s_y: f32, phi: f32, point_count: u32, r: u8, g: u8, b: u8) {
+    let cos_phi = phi.cos();
+    let sin_phi = phi.sin();
+    for _i in 0..point_count {
+        let x = rng.gen::<f32>().powi(3);
+        let y = rng.gen::<f32>().powi(3);
+
+        let x_s = s_x * (2.0 * x - 1.0);
+        let y_s = s_y * (2.0 * y - 1.0);
+        
+        draw_point(image, x_s * cos_phi - y_s * sin_phi + c_x, x_s * sin_phi + y_s * cos_phi + c_y, r, g, b);
+    }
 }
 
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     const WIDTH: i32  = 100;
     const HEIGHT: i32 = 100;
 
     let mut image = RgbImage::from_fn(WIDTH as u32, HEIGHT as u32, |_x, _y| {
         image::Rgb([35u8, 34u8, 28u8])
     });
+
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(745780395);
 
     for x in 0..WIDTH {
         put_pixel(&mut image, x, HEIGHT / 2, 242, 238, 230, 0.25);
@@ -89,6 +107,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     draw_circle_msaa(&mut image, 75.0, 75.0, 24.5, 242, 238, 230);
 
+    draw_pillar(&mut image, &mut rng, 25.0, 75.0, -7.0, 20.0, 0.25 * std::f32::consts::PI, 100, 242, 238, 230);
+
     // image.save_with_format("image.png", ImageFormat::Png)?;
 
     // Create a window with default options and display the image.
@@ -100,7 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         resizable: true,
         borderless: false,
         overlays_visible: false,
-        default_controls: false
+        default_controls: true
     })?;
     window.set_image("image-001", image)?;
 

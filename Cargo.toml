@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 image = "0.23.14"
+rand = "0.8"
+rand_core = "0.6"
+rand_xoshiro = "0.6"
 show-image = { version = "0.10.1", features = ["image", "save"] }
